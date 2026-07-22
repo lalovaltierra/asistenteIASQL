@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)
-![Ollama](https://img.shields.io/badge/Ollama-Gemma_3-purple.svg)
+![Ollama](https://img.shields.io/badge/Ollama-Qwen_3.5-purple.svg)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-Supported-red.svg)
 
 Un motor de Inteligencia Artificial basado en el paradigma de Generación Aumentada por Recuperación (RAG) para la conversión de lenguaje natural a sentencias SQL (Text-to-SQL). 
@@ -15,7 +15,7 @@ Este proyecto fue diseñado para democratizar el acceso analítico a datos guber
 El sistema utiliza una arquitectura multi-contenedor que aísla el procesamiento cognitivo de la base de datos transaccional:
 
 * **Orquestación RAG:** `Vanna.ai` gestiona el contexto y los *embeddings*.
-* **Motor LLM Local:** `Ollama` ejecutando **Gemma 3 (8B)** para inferencia sin depender de APIs de terceros (OpenAI/Anthropic).
+* **Motor LLM Local:** `Ollama` ejecutando **Qwen 3.5 (5B)** para inferencia sin depender de APIs de terceros (OpenAI/Anthropic).
 * **Vector Store:** `ChromaDB` para indexar esquemas DDL, reglas de negocio y *Few-Shots*.
 * **Capa API & Seguridad:** `FastAPI` + `Uvicorn` intercepta peticiones, inyecta reglas Regex de sanitización y gestiona los endpoints RESTful.
 * **Auditoría Local:** Base de datos embebida en `SQLite` para registrar métricas de tiempo (LLM vs SQL), queries generadas y control de errores.
@@ -41,13 +41,35 @@ Inicia los contenedores (API, Base Vectorial y Ollama):
 
 docker-compose up -d
 
-### 4. Inyectar la Memoria Semántica (Entrenamiento)
+### 4. Descargar el Modelo Local (Qwen 3.5)
+Utilizamos una versión cuantizada de Qwen 3.5 alojada en Hugging Face. Para cargarla en el contenedor de Ollama (ollama_service), sigue estos pasos:
+
+####A. Descargar el archivo .gguf:
+Descarga el peso del modelo en un directorio local que esté montado como volumen en tu Docker (por ejemplo, en ./models/).
+
+wget "[https://huggingface.co/tu-usuario/ruta-al-modelo/resolve/main/qwen-3.5-q5_k_m.gguf](https://huggingface.co/tu-usuario/ruta-al-modelo/resolve/main/qwen-3.5-q5_k_m.gguf)" -O ./models/qwen3.5.gguf
+(Nota: Ajusta la URL al repositorio exacto de Hugging Face que estés utilizando).
+
+####B. Crear el Modelfile:
+Crea un archivo llamado Modelfile dentro de la misma carpeta ./models/ con el siguiente contenido:
+
+Dockerfile
+FROM ./qwen3.5.gguf
+
+# Aquí puedes agregar SYSTEM prompts base si tu arquitectura lo requiere
+
+####C. Construir el modelo en Ollama:
+Ejecuta la instrucción dentro del contenedor para compilarlo:
+
+docker exec -it ollama_service ollama create qwen_local -f /models/Modelfile
+
+### 5. Inyectar la Memoria Semántica (Entrenamiento)
 Antes de hacer preguntas, el modelo necesita conocer la estructura de tu base de datos. Ejecuta el script de entrenamiento para popular ChromaDB:
 
 docker exec -it vanna_fastapi python backend/train.py
 (Espera a que la consola confirme que todas las tablas y reglas fueron inyectadas con éxito).
 
-### 5. ¡A consultar!
+### 6. ¡A consultar!
 El servidor estará corriendo en http://localhost:8000. Puedes probar el endpoint principal enviando un POST a /api/query con el payload:
 
 JSON
