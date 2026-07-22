@@ -33,7 +33,8 @@ Clona este repositorio y configura tus variables de entorno:
 
 git clone [https://github.com/lalovaltierra/asistenteIASQL.git](https://github.com/lalovaltierra/asistenteIASQL.git)
 cd asistenteIASQL
-# Configura tu archivo .env con la cadena de conexión a SQL Server
+
+#### Configura tu archivo .env con la cadena de conexión a SQL Server
 
 ### 3. Levantar la Infraestructura
 Inicia los contenedores (API, Base Vectorial y Ollama):
