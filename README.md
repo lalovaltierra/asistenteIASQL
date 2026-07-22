@@ -30,7 +30,26 @@ El sistema utiliza una arquitectura multi-contenedor que aísla el procesamiento
 
 ### 2. Clonar y Configurar
 Clona este repositorio y configura tus variables de entorno:
-```bash
+
 git clone [https://github.com/lalovaltierra/asistenteIASQL.git](https://github.com/lalovaltierra/asistenteIASQL.git)
 cd asistenteIASQL
 # Configura tu archivo .env con la cadena de conexión a SQL Server
+
+### 3. Levantar la Infraestructura
+Inicia los contenedores (API, Base Vectorial y Ollama):
+
+docker-compose up -d
+
+### 4. Inyectar la Memoria Semántica (Entrenamiento)
+Antes de hacer preguntas, el modelo necesita conocer la estructura de tu base de datos. Ejecuta el script de entrenamiento para popular ChromaDB:
+
+docker exec -it vanna_fastapi python backend/train.py
+(Espera a que la consola confirme que todas las tablas y reglas fueron inyectadas con éxito).
+
+### 5. ¡A consultar!
+El servidor estará corriendo en http://localhost:8000. Puedes probar el endpoint principal enviando un POST a /api/query con el payload:
+
+JSON
+{
+  "question": "¿Cuáles son los 5 proyectos con mayor avance financiero en 2026?"
+}
