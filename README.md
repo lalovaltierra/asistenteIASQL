@@ -44,21 +44,21 @@ docker-compose up -d
 ### 4. Descargar el Modelo Local (Qwen 3.5)
 Utilizamos una versión cuantizada de Qwen 3.5 alojada en Hugging Face. Para cargarla en el contenedor de Ollama (ollama_service), sigue estos pasos:
 
-####A. Descargar el archivo .gguf:
+#### A. Descargar el archivo .gguf:
 Descarga el peso del modelo en un directorio local que esté montado como volumen en tu Docker (por ejemplo, en ./models/).
 
 wget "[https://huggingface.co/tu-usuario/ruta-al-modelo/resolve/main/qwen-3.5-q5_k_m.gguf](https://huggingface.co/tu-usuario/ruta-al-modelo/resolve/main/qwen-3.5-q5_k_m.gguf)" -O ./models/qwen3.5.gguf
 (Nota: Ajusta la URL al repositorio exacto de Hugging Face que estés utilizando).
 
-####B. Crear el Modelfile:
+#### B. Crear el Modelfile:
 Crea un archivo llamado Modelfile dentro de la misma carpeta ./models/ con el siguiente contenido:
 
 Dockerfile
 FROM ./qwen3.5.gguf
 
-# Aquí puedes agregar SYSTEM prompts base si tu arquitectura lo requiere
+#### Aquí puedes agregar SYSTEM prompts base si tu arquitectura lo requiere
 
-####C. Construir el modelo en Ollama:
+#### C. Construir el modelo en Ollama:
 Ejecuta la instrucción dentro del contenedor para compilarlo:
 
 docker exec -it ollama_service ollama create qwen_local -f /models/Modelfile
