@@ -1,0 +1,10 @@
+vanna==0.7.9
+chromadb
+ollama
+fastapi
+uvicorn
+pyodbc
+pandas
+openpyxl
+requests
+pydantic

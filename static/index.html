@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Asistente iGTO</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f4f9; padding: 2rem; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        textarea { width: 100%; padding: 1rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .sql-box { background: #2d2d2d; color: #f8f8f2; padding: 1rem; border-radius: 4px; font-family: monospace; white-space: pre-wrap; margin-top: 1rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9em; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .loader { display: none; margin-top: 10px; font-style: italic; color: #666; }
+        
+        /* Estilos para el panel de métricas */
+        .metrics-panel { 
+            display: flex; 
+            justify-content: space-between; 
+            background: #e8f5e9; 
+            border-left: 5px solid #2e7d32; 
+            padding: 15px; 
+            margin-top: 15px; 
+            border-radius: 4px;
+        }
+        .metric-item { font-size: 0.9rem; color: #1b5e20; }
+        .metric-item strong { display: block; font-size: 1.2rem; color: #2e7d32; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Asistente de Datos iGTO con IA-BI</h2>
+    <textarea id="question" rows="3" placeholder="Ej: ¿Cuántos folios hay en el año?"></textarea>
+    <button onclick="askQuestion()">Consultar</button>
+    <div id="loader" class="loader">Procesando consulta con Qwen3.5...</div>
+
+    <div id="results" style="display:none; margin-top: 2rem;">
+        
+        <div class="metrics-panel">
+            <div class="metric-item">🤖 IA (Ollama)<br><strong id="metric-llm">0.0s</strong></div>
+            <div class="metric-item">🗄️ SQL Server<br><strong id="metric-sql">0.0s</strong></div>
+            <div class="metric-item">🏁 Tiempo Total<br><strong id="metric-total">0.0s</strong></div>
+        </div>
+
+        <h3>SQL Generado</h3>
+        <div id="sql-box" class="sql-box"></div>
+        <button id="btn-download" style="margin-top: 1rem; background: #28a745;" onclick="downloadExcel()">Descargar Excel Completo</button>
+        
+        <h3>Vista Previa de Datos (Max 100 rows)</h3>
+        <div style="overflow-x: auto;">
+            <table id="data-table">
+                <thead id="table-head"></thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSql = "";
+
+    async function askQuestion() {
+        const question = document.getElementById('question').value;
+        if (!question) return;
+
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('results').style.display = 'none';
+
+        try {
+            const res = await fetch('/api/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                currentSql = data.sql;
+                
+                // Actualizar métricas visuales
+                document.getElementById('metric-llm').textContent = `${data.metrics.time_llm}s`;
+                document.getElementById('metric-sql').textContent = `${data.metrics.time_sql}s`;
+                document.getElementById('metric-total').textContent = `${data.metrics.time_total}s`;
+
+                document.getElementById('sql-box').textContent = data.sql;
+                renderTable(data.data);
+                document.getElementById('results').style.display = 'block';
+            } else {
+                alert("Error: " + data.detail);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error de conexión con el servidor.");
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
+
+    function renderTable(dataArray) {
+        const thead = document.getElementById('table-head');
+        const tbody = document.getElementById('table-body');
+        thead.innerHTML = ''; tbody.innerHTML = '';
+
+        if (!dataArray || dataArray.length === 0) {
+            thead.innerHTML = '<tr><th>Sin resultados</th></tr>';
+            return;
+        }
+
+        const headers = Object.keys(dataArray[0]);
+        let headerRow = '<tr>';
+        headers.forEach(h => headerRow += `<th>${h}</th>`);
+        headerRow += '</tr>';
+        thead.innerHTML = headerRow;
+
+        dataArray.forEach(row => {
+            let tr = '<tr>';
+            headers.forEach(h => tr += `<td>${row[h]}</td>`);
+            tr += '</tr>';
+            tbody.innerHTML += tr;
+        });
+    }
+
+    async function downloadExcel() {
+        if (!currentSql) return;
+        
+        const res = await fetch('/api/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sql: currentSql })
+        });
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "reporte_datos.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    }
+</script>
+</body>
+</html>

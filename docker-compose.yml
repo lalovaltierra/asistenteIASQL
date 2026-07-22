@@ -1,0 +1,45 @@
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama_service
+    ports:
+      - "11434:11434"
+    volumes:
+      #- ollama_data:/root/.ollama
+      - ./mi_ollama_local:/root/.ollama
+# ==========================================
+    # 👇 ESTAS VARIABLES FUERZAN EL USO DE GPU 👇
+    # ==========================================
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h  # Mantiene el modelo en memoria VRAM para que no lo descargue
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # ==========================================
+    restart: always
+
+  api:
+    build: .
+    container_name: vanna_fastapi
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - ollama
+    command: ["python", "backend/main.py"]
+    volumes:
+      - ./backend:/app/backend
+      - ./static:/app/static
+      - chroma_data:/app/chroma_db
+
+volumes:
+  ollama_data:
+  chroma_data:
